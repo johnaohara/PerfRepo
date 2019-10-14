@@ -124,6 +124,13 @@ public class ConditionCheckerTest {
         } catch (IllegalArgumentException ex) {
         } //expected
 
+        condition = "CONDITION x <!= 10 DEFINE x = SELECT WHERE id = 1";
+        try {
+            conditionChecker.checkConditionSyntax(condition, createMetric());
+            fail("Query with invalid syntax should fail");
+        } catch (IllegalArgumentException ex) {
+        } //expected
+
         condition = "x < 1 DEFINE x = SELECT WHERE id = 1";
         try {
             conditionChecker.checkConditionSyntax(condition, createMetric());

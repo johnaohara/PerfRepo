@@ -92,6 +92,20 @@ public class Tag implements Entity<Tag>, Comparable<Tag> {
    }
 
    @Override
+   public boolean equals(Object obj) {
+      if (obj == null || !(obj instanceof Tag) || ((Tag) obj).getName() == null || ((Tag) obj).getId() == null)
+         return false;
+
+      return ((Tag) obj).getId().equals(this.id) && ((Tag) obj).getName().equals(this.name);
+
+   }
+
+   @Override
+   public int hashCode() {
+      return super.hashCode();
+   }
+
+   @Override
    public Tag clone() {
       try {
          return (Tag) super.clone();

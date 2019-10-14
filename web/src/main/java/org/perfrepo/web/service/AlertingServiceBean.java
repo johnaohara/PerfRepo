@@ -168,7 +168,7 @@ public class AlertingServiceBean implements AlertingService {
     */
    private boolean hasAlertAllTags(TestExecution testExecution, Alert alert) {
       for (Tag tag : alert.getTags()) {
-         if (!testExecution.getTags().contains(tag.getName())) {
+         if (!testExecution.getTags().contains(tag)) {
             return false;
          }
       }

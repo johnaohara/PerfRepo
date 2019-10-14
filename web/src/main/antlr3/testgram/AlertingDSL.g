@@ -45,9 +45,16 @@ DEFINE               : 'DEFINE';
 CONDITION            : 'CONDITION';
 WHERE                : 'WHERE';
 AND                  : 'AND';
+ANDAND	 : '&&';
 LAST                 : 'LAST';
 ASSIGN               : '=';
+EQUALITY             : '==';
+INEQUALITY           : '!=';
+OPEN_BRACKET         : '(';
+CLOSE_BRACKET        : ')';
 LTE                  : '<=';
+LT                   : '<';
+GT                   : '>';
 GTE                  : '>=';
 IN                   : 'IN';
 AVG                  : 'AVG';
@@ -56,6 +63,7 @@ MAX                  : 'MAX';
 NUMBER_NOT_ONE       : ('0' | '2'..'9');
 ONE                  : '1';
 COMMA                : ',';
+CHAR                 : ('a'..'z' | 'A'..'Z');
 ANY_CHAR             : . ;
 
 // Parser rules:
@@ -68,9 +76,11 @@ query_structure :   condition define |
                     multivalue grouping condition define_grouping;
 
 
-condition         : CONDITION^ any_with_equals;
+condition         : CONDITION^ multicondition ; //todo: need to split out numerical constructs and mathematical expressions!
 
-// Following lines are related to multivalue alerting only 
+multicondition	  : any_with_comparator (ANDAND any_with_comparator)*;
+
+// Following lines are related to multivalue alerting only
 multivalue        : MULTIVALUE^;
 strict            : STRICT^;
 grouping          : GROUPING^;
@@ -80,51 +90,53 @@ define_single_var_no_grouping     : DEFINE^ assign_no_grouping;
 // Force only grouping functions in DEFINE part
 define_grouping   : DEFINE^ assign_sequence_grouping;
 
-assign_no_grouping  :   any ASSIGN^ '('! multi_select ')'! |
-                        any ASSIGN^ multi_select;
+assign_no_grouping  :   any_char ASSIGN^ '('! multi_select ')'! |
+                        any_char ASSIGN^ multi_select;
 assign_sequence_grouping   : assign_grouping_avg  (COMMA! assign_grouping_avg)* |
                              assign_grouping_max  (COMMA! assign_grouping_max)* |
                              assign_grouping_min  (COMMA! assign_grouping_min)* ;
 
-assign_grouping_avg : any ASSIGN^ avg;
-assign_grouping_max : any ASSIGN^ max;
-assign_grouping_min : any ASSIGN^ min;
+assign_grouping_avg : any_char ASSIGN^ avg;
+assign_grouping_max : any_char ASSIGN^ max;
+assign_grouping_min : any_char ASSIGN^ min;
 
 // Following lines are related to singlevalue alerting only
 define            : DEFINE^ assign_sequence;
 assign_sequence   : assign  (COMMA! assign)*;
 
-assign            : any ASSIGN^ '('! simple_select ')'! |
-                    any ASSIGN^ simple_select |
-                    any ASSIGN^ avg |
-                    any ASSIGN^ max |
-                    any ASSIGN^ min;
+assign            : any_char ASSIGN^ OPEN_BRACKET! simple_select CLOSE_BRACKET! |
+                    any_char ASSIGN^ simple_select |
+                    any_char ASSIGN^ avg |
+                    any_char ASSIGN^ max |
+                    any_char ASSIGN^ min;
 
 // Following lines are used in both, multi && single value alerting
-avg               : AVG^ '('! multi_select ')'!;
-max               : MAX^ '('! multi_select ')'!;
-min               : MIN^ '('! multi_select ')'!;
+avg               : AVG^ OPEN_BRACKET! multi_select CLOSE_BRACKET!;
+max               : MAX^ OPEN_BRACKET! multi_select CLOSE_BRACKET!;
+min               : MIN^ OPEN_BRACKET! multi_select CLOSE_BRACKET!;
 
-simple_select     : SELECT^ equals_where simple_last? | SELECT^ simple_last;
+simple_select     : (SELECT^ equals_where simple_last?) | (SELECT^ simple_last);
 
-multi_select      : SELECT^ equals_where multi_last? |
-                    SELECT^ in_where |
+multi_select      : SELECT^ in_where |
+                    SELECT^ equals_where multi_last? |
                     SELECT^ multi_last;
 
-equals_where      : WHERE^ equals_condition (AND! equals_condition)*;
+equals_where      : WHERE^ equality_condition (AND! equality_condition)*;
 in_where          : WHERE^ in_condition;
 simple_last       : LAST^ ONE;
 multi_last        : LAST^ number | LAST^ number COMMA! number;
 
-equals_condition  : any ASSIGN^ any |
-                    any ASSIGN^ '"'! any '"'! |
-                    any LTE^ any |
-                    any LTE^ '"'! any '"'! |
-                    any GTE^ any |
-                    any GTE^ '"'! any '"'!;
+equality_condition  : any_char ASSIGN^ any |
+                    any_char ASSIGN^ '"'! any_char (WS any_char)* '"'! |
+                    any_char LTE^ any |
+                    any_char LTE^ '"'! any '"'! |
+                    any_char GTE^ any |
+                    any_char GTE^ '"'! any '"'!;
 
-in_condition      : any IN^ '('! any (COMMA! any)* ')'!;
+in_condition      : any_char IN^ '('! any_char (COMMA! any_char)* ')'!;
 
 number            : (NUMBER_NOT_ONE | ONE)* -> ANY[$text];
-any_with_equals   : ('=' | '>=' | '<=' | '(' | ')' | ANY_CHAR | NUMBER_NOT_ONE | ONE)* -> ANY[$text];
-any               : (NUMBER_NOT_ONE | ONE | ANY_CHAR)* -> ANY[$text];
+any_with_comparator   : ((CHAR | NUMBER_NOT_ONE | ONE | ANY_CHAR)* (EQUALITY | INEQUALITY | ASSIGN | GTE | LTE | GT | LT)
+                        ( OPEN_BRACKET | CLOSE_BRACKET | CHAR | NUMBER_NOT_ONE | ONE | ANY_CHAR)*)   -> ANY[$text];
+any_char          : (NUMBER_NOT_ONE | ONE | CHAR )* -> ANY[$text];
+any               : (NUMBER_NOT_ONE | ONE | ANY_CHAR | WS)+ -> ANY[$text];

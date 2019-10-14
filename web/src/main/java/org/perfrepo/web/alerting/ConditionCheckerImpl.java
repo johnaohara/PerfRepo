@@ -36,7 +36,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.perfrepo.model.builder.TestExecutionBuilder;
 import org.perfrepo.web.util.MultiValue;
 
 /**
@@ -80,21 +79,11 @@ public class ConditionCheckerImpl implements ConditionChecker {
 
     @Override
     public void checkConditionSyntax(String condition, Metric metric) {
-        // creates dummy execution and triggers evaluation against it
-        // if we had a 'perfect' grammar, we would only need to call parseTree(condition);
-        // but ATM we need script engine to evaluate CONDITION and tell us if there were any errors
-        // e.g. current grammar cannot catch nonsenses such as: CONDITION x <!= 10
-        TestExecution testExecution;
-        TestExecutionBuilder builder = TestExecution.builder();
-        if (condition.trim().startsWith("MULTIVALUE")) {           
-            String paramName = "foo";
-            builder.value(metric.getName(), 0d, paramName, "0");          
-            builder.value(metric.getName(), 1d, paramName, "1");          
-        } else {
-            builder.value(metric.getName(), 0d);
-        }
-        testExecution = builder.build();
-        checkCondition(condition, testExecution, metric);
+
+        this.metric = metric;
+        expression = null;
+        parseTree(condition);
+
     }
 
     @Override
@@ -277,8 +266,11 @@ public class ConditionCheckerImpl implements ConditionChecker {
             throw new IllegalArgumentException("Unexpected end of condition.");
         }
 
-        String equation = tree.getChild(conditionKeywordIndex).getChild(0).getText(); //equation after condition
-        expression = equation;
+        StringBuilder equationBuilder = new StringBuilder();
+        for( int i =0 ; i < tree.getChild(conditionKeywordIndex).getChildCount(); i++){
+            equationBuilder.append(tree.getChild(conditionKeywordIndex).getChild(i).getText()).append(" ");
+        }
+        expression = equationBuilder.toString().trim();
 
         //process variables
         Tree defineNode = tree.getChild(defineKeywordIndex);
