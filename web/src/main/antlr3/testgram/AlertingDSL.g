@@ -45,7 +45,7 @@ DEFINE               : 'DEFINE';
 CONDITION            : 'CONDITION';
 WHERE                : 'WHERE';
 AND                  : 'AND';
-ANDAND	 : '&&';
+LOGICAL_AND	         : '&&';
 LAST                 : 'LAST';
 ASSIGN               : '=';
 EQUALITY             : '==';
@@ -64,7 +64,10 @@ NUMBER_NOT_ONE       : ('0' | '2'..'9');
 ONE                  : '1';
 COMMA                : ',';
 CHAR                 : ('a'..'z' | 'A'..'Z');
-ANY_CHAR             : . ;
+DECIMAL             : '\.';
+HYPHEN	:	'-';
+COLON	:	':';
+NUMERICAL_OPERATOR : ('+' | '-' | '*' | '/' | '^' | '%');
 
 // Parser rules:
 
@@ -78,7 +81,7 @@ query_structure :   condition define |
 
 condition         : CONDITION^ multicondition ; //todo: need to split out numerical constructs and mathematical expressions!
 
-multicondition	  : any_with_comparator (ANDAND any_with_comparator)*;
+multicondition	  : any_with_comparator (LOGICAL_AND any_with_comparator)*;
 
 // Following lines are related to multivalue alerting only
 multivalue        : MULTIVALUE^;
@@ -126,17 +129,16 @@ in_where          : WHERE^ in_condition;
 simple_last       : LAST^ ONE;
 multi_last        : LAST^ number | LAST^ number COMMA! number;
 
-equality_condition  : any_char ASSIGN^ any |
+equality_condition  : any_char ASSIGN^ any_char |
                     any_char ASSIGN^ '"'! any_char (WS any_char)* '"'! |
-                    any_char LTE^ any |
-                    any_char LTE^ '"'! any '"'! |
-                    any_char GTE^ any |
-                    any_char GTE^ '"'! any '"'!;
+                    any_char LTE^ any_char |
+                    any_char LTE^ '"'! any_char '"'! |
+                    any_char GTE^ any_char |
+                    any_char GTE^ '"'! any_char '"'!;
 
 in_condition      : any_char IN^ '('! any_char (COMMA! any_char)* ')'!;
 
 number            : (NUMBER_NOT_ONE | ONE)* -> ANY[$text];
-any_with_comparator   : ((CHAR | NUMBER_NOT_ONE | ONE | ANY_CHAR)* (EQUALITY | INEQUALITY | ASSIGN | GTE | LTE | GT | LT)
-                        ( OPEN_BRACKET | CLOSE_BRACKET | CHAR | NUMBER_NOT_ONE | ONE | ANY_CHAR)*)   -> ANY[$text];
-any_char          : (NUMBER_NOT_ONE | ONE | CHAR )* -> ANY[$text];
-any               : (NUMBER_NOT_ONE | ONE | ANY_CHAR | WS)+ -> ANY[$text];
+any_with_comparator   : ((CHAR | NUMBER_NOT_ONE | ONE | NUMERICAL_OPERATOR | DECIMAL )* (EQUALITY | INEQUALITY | ASSIGN | GTE | LTE | GT | LT)
+                        ( OPEN_BRACKET | CLOSE_BRACKET | CHAR | NUMBER_NOT_ONE | ONE | WS | HYPHEN | COLON | NUMERICAL_OPERATOR | DECIMAL)*)   -> ANY[$text];
+any_char          : (NUMBER_NOT_ONE | ONE | CHAR | WS | HYPHEN | COLON | DECIMAL )* -> ANY[$text];
