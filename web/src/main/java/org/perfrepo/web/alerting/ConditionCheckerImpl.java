@@ -267,7 +267,7 @@ public class ConditionCheckerImpl implements ConditionChecker {
         }
 
         StringBuilder equationBuilder = new StringBuilder();
-        for( int i =0 ; i < tree.getChild(conditionKeywordIndex).getChildCount(); i++){
+        for (int i = 0; i < tree.getChild(conditionKeywordIndex).getChildCount(); i++) {
             equationBuilder.append(tree.getChild(conditionKeywordIndex).getChild(i).getText()).append(" ");
         }
         expression = equationBuilder.toString().trim();
